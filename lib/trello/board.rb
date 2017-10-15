@@ -17,7 +17,7 @@ module Trello
   # @!attribute [r] prefs
   #   @return [Hash] A 24-character hex string
   class Board < BasicData
-    register_attributes :id, :name, :description, :closed, :starred, :url, :organization_id, :prefs, :last_activity_date,
+    register_attributes :id, :name, :description, :board_source_id, :closed, :starred, :url, :organization_id, :prefs, :last_activity_date,
       readonly: [ :id, :url, :last_activity_date ]
     validates_presence_of :id, :name
     validates_length_of   :name,        in: 1..16384
@@ -50,6 +50,15 @@ module Trello
         data.merge!('prefs' => fields[:prefs]) if fields[:prefs]
         client.create(:board, data)
       end
+      
+      def clone(fields)
+        data = {
+          'name'  => fields[:name],
+          'idOrganization' => fields[:organization_id],
+          'idBoardSource' => fields[:board_source_id]
+        }
+        client.create(:board, data)
+	    end
 
       # @return [Array<Trello::Board>] all boards for the current user
       def all
@@ -64,6 +73,7 @@ module Trello
       fields.merge!(desc: description) if description
       fields.merge!(idOrganization: organization_id) if organization_id
       fields.merge!(flat_prefs)
+      fields.merge!(idBoardSource: board_source_id) if board_source_id
 
       from_response(client.post("/boards", fields))
     end
@@ -90,6 +100,7 @@ module Trello
       attributes[:id]              = fields['id'] || fields[:id]                          if fields['id']   || fields[:id]
       attributes[:name]            = fields['name'] || fields[:name]                      if fields['name'] || fields[:name]
       attributes[:description]     = fields['desc'] || fields[:desc]                      if fields['desc'] || fields[:desc]
+      attributes[:board_source_id] = fields['idBoardSource'] || fields['board_source_id'] if fields['idBoardSource'] || fields['board_source_id']
       attributes[:closed]          = fields['closed']                                     if fields.has_key?('closed')
       attributes[:closed]          = fields[:closed]                                      if fields.has_key?(:closed)
       attributes[:starred]         = fields['starred']                                    if fields.has_key?('starred')
@@ -125,12 +136,16 @@ module Trello
     # Add a member to this Board.
     #    type => [ :admin, :normal, :observer ]
     def add_member(member, type = :normal)
-      client.put("/boards/#{self.id}/members/#{member.id}", { type: type })
+      client.put("/boards/#{self.id}/members/#{member}", { type: type })
+    end
+	  
+    def add_new_member(email, board_id, type = :normal)
+      client.put("/boards/#{board_id}/members", { type: type, email: email })
     end
 
     # Remove a member of this Board.
     def remove_member(member)
-      client.delete("/boards/#{self.id}/members/#{member.id}")
+      client.delete("/boards/#{self.id}/members/#{member}")
     end
 
     # Return all the cards on this board.
