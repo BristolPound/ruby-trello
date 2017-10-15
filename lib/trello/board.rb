@@ -132,7 +132,21 @@ module Trello
     def remove_member(member)
       client.delete("/boards/#{self.id}/members/#{member.id}")
     end
+    
+    # Return all the cards on this board.
+    #
+    # @return [Array<Trello::Card>] all cards for the board
+    def all_cards
+      client.get("/boards/#{self.id}/cards")
+    end
 
+    # Return all the lists on this board.
+    #
+    # @return [Array<Trello::List>] all cards for the board
+    def all_lists
+      client.get("/boards/#{self.id}/lists")
+    end
+    
     # Return all the cards on this board.
     #
     # This method, when called, can take a hash table with a filter key containing any
